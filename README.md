@@ -1,20 +1,60 @@
-# Titik Temu Kopi POS — Laravel Starter
+# Titik Temu Kopi POS
 
-Starter project untuk tes MED-WEB-01. Stack: Laravel 12, PHP 8.2+, MySQL, Blade, Bootstrap CDN.
-Fitur pada paket ini: login/logout, role admin/kasir, dashboard KPI, master kategori & produk, POS multi-item, pembayaran, struk print, laporan dan CSV.
-Skema resep/bahan baku disediakan sebagai fondasi (belum ada UI resep dan pengurangan bahan resep otomatis).
+Aplikasi Point of Sale berbasis Laravel 12 untuk operasional kedai kopi. UI menggunakan Blade, Bootstrap 5 melalui CDN, dan Bootstrap Icons.
 
-## 1. Buat project Laravel
+## Fitur
+
+- Login dan logout dengan role admin dan kasir.
+- Dashboard berisi ringkasan omzet, pesanan lunas, menu terlaris, stok rendah, grafik omzet 7 hari, dan transaksi terbaru.
+- Manajemen kategori dan produk untuk admin.
+- Transaksi POS multi-item dengan tipe dine-in atau takeaway, diskon, pajak 10%, dan metode pembayaran tunai, QRIS, transfer bank, atau debit.
+- Struk transaksi yang dapat dicetak dari browser.
+- Laporan penjualan dengan ekspor CSV untuk admin.
+- Tabel resep dan bahan baku tersedia sebagai fondasi; UI resep dan pengurangan bahan otomatis belum diterapkan.
+
+## Persyaratan
+
+- PHP 8.2 atau lebih baru dan Composer.
+- Database MySQL atau SQLite (default).
+- Node.js dan npm hanya diperlukan bila ingin membangun aset frontend Vite. Halaman aplikasi saat ini memuat Bootstrap dari CDN.
+
+## Instalasi
+
+Clone repository, lalu jalankan dari folder project:
+
 ```bash
-composer create-project laravel/laravel titik-temu-pos "^12.0"
-cd titik-temu-pos
+composer install
 ```
-Ekstrak ZIP starter ini ke root project Laravel (gabungkan folder `app`, `database`, `resources`, `routes`).
 
-## 2. Database
-Buat database MySQL `titik_temu_pos`, lalu atur `.env`:
+Salin `.env.example` menjadi `.env`, lalu buat application key:
+
+```bash
+php artisan key:generate
+```
+
+### SQLite (default)
+
+Pastikan file database tersedia. Di PowerShell:
+
+```powershell
+New-Item -ItemType File -Force database/database.sqlite
+```
+
+Biarkan konfigurasi `DB_CONNECTION=sqlite` pada `.env`, lalu jalankan migrasi dan data demo:
+
+```bash
+php artisan migrate --seed
+php artisan serve
+```
+
+Buka http://127.0.0.1:8000.
+
+### MySQL (opsional)
+
+Buat database `titik_temu_pos`, lalu atur nilai berikut di `.env`:
+
 ```env
-APP_NAME="Titik Temu POS"
+APP_NAME="Titik Temu Kopi POS"
 APP_URL=http://127.0.0.1:8000
 DB_CONNECTION=mysql
 DB_HOST=127.0.0.1
@@ -23,38 +63,61 @@ DB_DATABASE=titik_temu_pos
 DB_USERNAME=root
 DB_PASSWORD=
 ```
-Jalankan:
-```bash
-php artisan key:generate
-php artisan migrate --seed
-php artisan serve
-```
-Buka http://127.0.0.1:8000
 
-## 3. Akun demo
+Kemudian jalankan `php artisan migrate --seed` dan `php artisan serve`.
+
+## Akun demo
+
 - Admin: `admin@titiktemu.test` / `password`
 - Kasir: `kasir@titiktemu.test` / `password`
-Ganti password demo sebelum digunakan sungguhan.
 
-## 4. Folder penting
-- `routes/web.php`: route & proteksi role
-- `app/Http/Controllers`: auth, dashboard, master, POS, laporan
-- `app/Models`: relasi data
-- `database/migrations`: struktur data
-- `database/seeders/DatabaseSeeder.php`: akun + data demo
-- `resources/views`: Blade UI
+Seeder membuat atau memperbarui akun serta kategori dan produk demo. Ganti password demo sebelum aplikasi digunakan sungguhan.
 
-## 5. Alur demo
-1. Login sebagai admin, buka Dashboard, Kategori, Produk.
-2. Logout, login sebagai kasir.
-3. Buat transaksi, pilih tipe pesanan dan produk, qty, diskon, metode pembayaran.
-4. Pembayaran tunai harus >= tagihan. Struk dapat dicetak.
-5. Buka laporan dan ekspor CSV.
+## Alur penggunaan
 
-## Catatan integritas dan batasan
-- Nominal dihitung ulang di server; harga dari browser tidak dipercaya.
-- Header dan detail transaksi disimpan dalam `DB::transaction()`.
-- Stok produk dikunci dengan `lockForUpdate()` lalu diperiksa dan dikurangi dalam transaksi yang sama.
-- Invoice menggunakan tabel sequence sederhana? Implementasi saat ini memakai UUID pendek acak setelah tanggal agar aman dari collision, dengan pola `INV-POS-YYYYMMDD-XXXX` (XXXX alfanumerik).
-- Implementasi stok adalah stok produk/menu, sesuai skema dasar proyek. Modul recipes/ingredients adalah fondasi dan perlu disempurnakan bila waktu cukup.
-- Ini starter ujian, bukan sistem POS produksi: belum menangani printer thermal langsung, audit trail, void/refund dengan approval, rate limiting khusus, atau pajak/aturan daerah yang kompleks.
+1. Masuk sebagai admin untuk melihat dashboard serta mengelola kategori dan produk.
+2. Masuk sebagai kasir untuk membuat transaksi.
+3. Pilih tipe pesanan, tambahkan produk dan jumlahnya, lalu tentukan diskon serta metode pembayaran.
+4. Setelah transaksi tersimpan, struk dapat dicetak dari halaman struk.
+5. Admin dapat membuka laporan dan mengunduh CSV.
+
+## Struktur penting
+
+- `routes/web.php`: route dan middleware role.
+- `app/Http/Controllers`: autentikasi, dashboard, kategori, produk, POS, dan laporan.
+- `app/Models`: model dan relasi data.
+- `database/migrations`: skema database.
+- `database/seeders/DatabaseSeeder.php`: akun serta data demo.
+- `resources/views`: tampilan Blade.
+
+## Integritas transaksi dan batasan
+
+- Harga dan total dihitung ulang di server; nilai dari browser tidak dipercaya.
+- Pembuatan order, detail transaksi, dan pengurangan stok berlangsung di dalam `DB::transaction()`.
+- Stok produk dikunci dengan `lockForUpdate()` dan diperiksa sebelum dikurangi.
+- Invoice mengikuti pola `INV-POS-YYYYMMDD-XXXX`, dengan `XXXX` berupa 4 karakter acak alfanumerik dan constraint unik di database.
+- Stok yang dikelola adalah stok produk/menu. Modul resep dan bahan baku masih berupa fondasi.
+- Aplikasi ini belum menangani printer thermal langsung, audit trail, void/refund dengan approval, rate limiting khusus, atau aturan pajak daerah yang kompleks.
+
+## Pengujian
+
+Jalankan test suite dengan:
+
+```bash
+php artisan test
+```
+
+## Aset frontend
+
+Untuk menjalankan Vite saat mengembangkan aset:
+
+```bash
+npm install
+npm run dev
+```
+
+Untuk membuat build produksi:
+
+```bash
+npm run build
+```
